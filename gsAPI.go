@@ -33,6 +33,21 @@ type JsonResponse struct {
 	Result ResultResponse `json:"result"`
 }
 
+
+type Headers struct {
+	WsKey string `json:"wsKey"`
+}
+
+type Params struct {
+	Name string `json:"name"`
+}
+
+type Payload struct {
+	Method string `json:"method"`
+	Parameters Params `json:"parameters"`
+	Header Headers `json:"header"`
+}
+
 var apiScheme = "http://"
 var apiHost = "api.grooveshark.com"
 var apiEndpoint = "/ws3.php"
@@ -45,7 +60,8 @@ func New(key string, secret string) {
 }
 
 func StartSession() (string, error) {
-	result, err := makeCall("startsession","", "sessionID", true, "")
+	args := Params{}
+	result, err := makeCall("startSession",args, "sessionID", true, "")
 	if err != nil {
 		return "",err
 	}
@@ -64,13 +80,21 @@ func ComputeHmacMD5(message string, secret string) string {
 
 }
 
-func makeCall(method string, args interface{}, resultkey string, https bool, sessionID string) (string, error) {
+func makeCall(method string, args Params, resultkey string, https bool, sessionID string) (string, error) {
 
 	if https {
 		apiScheme = "https://"
 	}
 	postData := `{"method":"`+method+`","header":{"wsKey":"`+WsKey+`"},"parameters":[]}`
-	content := bytes.NewBuffer([]byte(postData))
+	headers := Headers{WsKey: WsKey}
+	post := Payload{Method: method,Parameters: args,Header: headers }
+	log.Print(post)
+	d,e := json.Marshal(post)
+	if e !=nil {
+		log.Fatal(e.Error())
+	}
+	log.Print(string(d))
+	content := bytes.NewBuffer([]byte(d))
 
 	sig := createMessageSig(postData, WsSecret)
 	log.Print(sig)
@@ -95,7 +119,7 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 		return "", errors.New(strconv.Itoa(jsonresponse.Error[0].Code)+" - "+jsonresponse.Error[0].Message)
 	}
 
-	return "yes",errors.New(strconv.Itoa(1))
+	return "yes", nil
 }
 
 func handleError(v interface{}) {
