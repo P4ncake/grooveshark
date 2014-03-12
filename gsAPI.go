@@ -9,29 +9,10 @@ import(
 	"encoding/json"
 	"io/ioutil"
 	"errors"
-	_ "strconv"
+	"strconv"
 	"encoding/hex"
 )
 
-type ErrorResponse struct {
-	Code int `json:"code"`
-	Message string `json:"Message"`
-}
-
-type HeaderResponse struct {
-	Hostname string `json:"hostname"`
-}
-
-type ResultResponse struct {
-	Success	bool `json:"success"`
-	SessionId string `json:"sessionID"`
-}
-
-type JsonResponse struct {
-	Error []ErrorResponse `json:"errors"`
-	Header HeaderResponse `json:"header"`
-	Result map[string]interface{} `json:"result"`
-}
 
 
 type Headers struct {
@@ -63,8 +44,7 @@ func PingService() (string, error){
 	if err != nil {
 		return "", err
 	}
-	log.Fatal(result)
-	return "", nil
+	return result.(string), nil
 }
 
 func StartSession() (string, error) {
@@ -78,6 +58,23 @@ func StartSession() (string, error) {
 	return sessionID, nil
 }
 
+func LogOut(SessionID string) error {
+	args := map[string]interface{}{}
+	result, err := makeCall("logout",args,"success",false,SessionID)
+
+	if err != nil {
+		return err
+	}
+	if result.(map[string]interface{})["success"].(bool) {
+		return nil
+	}
+	return errors.New("Logout Failed!")
+}
+
+func GetUserInfo() (interface{}, error) {
+	return makeCall("getuserinfo", map[string]interface{}{},"",false,sessionID)
+}
+
 func Authenticate(username string, password string) (interface{}, error) {
 	if username == "" || password == "" {
 		return nil, errors.New("Empty username or password")
@@ -86,7 +83,7 @@ func Authenticate(username string, password string) (interface{}, error) {
 	h := md5.New()
 	h.Write([]byte(password))
 	hpass := hex.EncodeToString(h.Sum(nil))
-
+	log.Print(hpass)
 	args := map[string]interface{}{
 		"login":username,
 		"password" : hpass,
@@ -102,6 +99,105 @@ func Authenticate(username string, password string) (interface{}, error) {
 	}
 	return result, nil
 }
+
+/*
+ *	Get the playlists owned by the given UserId
+ *	Requires a valid sessionID and authenticated user
+ *
+ *	Set limit to 0 for no limit
+ *	Set UserId to 0 to get the logged-in user's playlists
+ */
+func GetUserPlaylists(limit int,UserId int) (interface{}, error) {
+	var method string
+	args := map[string]interface{}{
+		"limit": limit,
+	}
+
+	if UserId != 0 {
+		method = "getUserPlaylistsByUserID"
+		args["userID"] = UserId
+	} else {
+		method = "getUserPlaylists"
+
+	}
+
+	return makeCall(method,args,"playlists",false,sessionID)
+}
+
+func GetUserLibrary(limit int) (interface{}, error) {
+
+	args := map[string]interface{}{
+		"limit": limit,
+	}
+
+	return makeCall("getUserLibrarySongs",args,"songs",false,sessionID)
+
+}
+
+func GetUserFavorites(limit int) (interface{}, error) {
+
+	args := map[string]interface{}{
+		"limit": limit,
+	}
+
+	return makeCall("getUserFavoriteSongs",args,"songs",false,sessionID)
+
+}
+
+func AddUserFavoriteSong(songId int) (interface{}, error) {
+	args := map[string]interface{}{
+		"songID": songId,
+	}
+	return makeCall("addUserFavoriteSong",args,"success",false,sessionID)
+}
+
+func AddUserLibrarySongs(songId int) (interface{}, error) {
+	args := map[string]interface{}{
+		"songID": songId,
+	}
+	return makeCall("addUserLibrarySongsEx",args,"success",false,sessionID)
+}
+
+func CreatePlaylist(name string,songIds []int) (interface{}, error) {
+	if name == "" {
+		return nil, errors.New("Playlist's Name empty")
+	}
+	args := map[string]interface{}{
+		"name": name,
+		"songIDs":songIds,
+	}
+
+	return makeCall("createPlaylist",args,"",false,sessionID)
+}
+
+
+func AddSongToPlaylist(playlistId int, songId int) (interface{}, error) {
+	songs, err := GetPlaylistSongs(playlistId,0)
+	if err != nil {
+		return nil, err
+	}
+	log.Print(songs)
+	return nil,nil
+}
+
+
+func GetPlaylistSongs(playlistId int, limit int) (interface{}, error) {
+	args := map[string]interface{}{
+		"playlistID": playlistId,
+		"limit": limit,
+	}
+	songs, err :=  makeCall("getPlaylistSongs",args,"songs",false,sessionID)
+	if err != nil {
+		return nil, err
+	}
+	var SongIds []float64
+	for _,v := range songs.(map[string]interface{})["songs"].([]interface{}) {
+		songId := v.(map[string]interface{})["SongID"].(float64)
+		SongIds = append(SongIds,songId)
+	}
+	return SongIds ,nil
+}
+
 
 func createMessageSig(params string, secret string) string {
 	return computeHmacMD5(params, secret)
@@ -126,7 +222,6 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	if e !=nil {
 		log.Fatal(e.Error())
 	}
-//	log.Print(string(d))
 	content := bytes.NewBuffer([]byte(d))
 
 	sig := createMessageSig(string(d), WsSecret)
@@ -139,7 +234,7 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	if readerr != nil {
 		log.Fatal("Err READALL: "+ err.Error())
 	}
-	log.Print(string(body))
+	//log.Print(string(body))
 	var jsonresponse map[string]interface{}
 	err = json.Unmarshal(body,&jsonresponse)
 	log.Print(jsonresponse)
@@ -147,10 +242,13 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 		log.Fatal("Err : "+ err.Error())
 	}
 
-/*	if len(jsonresponse["Error"]) != 0 {
-		return nil, errors.New(strconv.Itoa(jsonresponse.Error[0].Code)+" - "+jsonresponse.Error[0].Message)
+	jsonErr := jsonresponse["errors"]
+	if jsonErr != nil {
+		Err := jsonresponse["errors"].([]interface{})[0].(map[string]interface{})
+		return nil, errors.New(strconv.FormatFloat(Err["code"].(float64),'g',3,64)+" - " + Err["message"].(string))
+		return nil,errors.New("TODO")
 	}
-*/
+
 	return jsonresponse["result"], nil
 }
 
