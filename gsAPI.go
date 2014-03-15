@@ -1,20 +1,19 @@
 package gsAPI
 
-import(
-	"log"
-	"net/http"
+
+import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/md5"
-	"encoding/json"
-	"io/ioutil"
-	"errors"
-	"strconv"
 	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"strconv"
 	"regexp"
 )
-
-
 
 type Headers struct {
 	WsKey string `json:"wsKey"`
@@ -30,6 +29,7 @@ type Payload struct {
 var apiScheme = "http://"
 var apiHost = "api.grooveshark.com"
 var apiEndpoint = "/ws3.php"
+
 
 var WsKey ,WsSecret string
 var sessionID string
@@ -54,11 +54,13 @@ func PingService() (string, error){
 
 func StartSession() (string, error) {
 
+
 	args := map[string]interface{}{}
 	result, err := makeCall("startSession",args, "sessionID", true, "")
 	if err != nil {
-		return "",err
+		return "", err
 	}
+
 	sessionID = result.(map[string]interface{})["sessionID"].(string)
 	return sessionID, nil
 }
@@ -383,7 +385,7 @@ func computeHmacMD5(message string, secret string) string {
 	key := []byte(secret)
 	h := hmac.New(md5.New, key)
 	h.Write([]byte(message))
-    return hex.EncodeToString(h.Sum(nil))
+	return hex.EncodeToString(h.Sum(nil))
 
 }
 
@@ -392,6 +394,7 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	if https {
 		apiScheme = "https://"
 	}
+
 	headers := Headers{WsKey: WsKey, SessionID: sessionID}
 	post := Payload{Method: method,Parameters: args,Header: headers }
 	d,e := json.Marshal(post)
@@ -403,16 +406,18 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	}
 	content := bytes.NewBuffer([]byte(d))
 
+
 	sig := createMessageSig(string(d), WsSecret)
 	requestUrl := apiScheme+apiHost+apiEndpoint+"?sig="+sig
 	resp, err := http.Post(requestUrl,"text/json charset=UTF-8",content)
 	if err != nil {
-		log.Fatal("Err POST: "+ err.Error())
+		log.Fatal("Err POST: " + err.Error())
 	}
 	body, readerr := ioutil.ReadAll(resp.Body)
 	if readerr != nil {
-		log.Fatal("Err READALL: "+ err.Error())
+		log.Fatal("Err READALL: " + err.Error())
 	}
+
 	if Logs {
 		log.Print(string(body))
 	}
@@ -423,8 +428,9 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	}
 
 	if err != nil {
-		log.Fatal("Err : "+ err.Error())
+		log.Fatal("Err : " + err.Error())
 	}
+
 
 	jsonErr := jsonresponse["errors"]
 	if jsonErr != nil {
