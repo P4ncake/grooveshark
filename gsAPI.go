@@ -11,6 +11,7 @@ import(
 	"errors"
 	"strconv"
 	"encoding/hex"
+	"regexp"
 )
 
 
@@ -32,6 +33,10 @@ var apiEndpoint = "/ws3.php"
 
 var WsKey ,WsSecret string
 var sessionID string
+
+var Logs = false
+
+var Country string
 
 func New(key string, secret string) {
 	WsKey = key
@@ -176,12 +181,95 @@ func AddSongToPlaylist(playlistId int, songId int) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Print(songs)
-	return nil,nil
+	songs = append(songs, songId)
+	return SetPlaylistSongs(playlistId,songs)
 }
 
+func SetPlaylistSongs(playlistId int, songIds []int) (interface{}, error) {
+	args := map[string]interface{}{
+		"playlistID": playlistId,
+		"songIDs": songIds,
+	}
 
-func GetPlaylistSongs(playlistId int, limit int) (interface{}, error) {
+	return makeCall("setPlaylistSongs", args, "", false, sessionID)
+}
+
+/**
+ * Artists/Albums/Songs related methods
+ */
+
+func GetArtistInfo(artistId []int) (interface{}, error) {
+	args := map[string]interface{}{
+		"artistIDs": artistId,
+	}
+	return makeCall("getArtistsInfo", args, "artists", false, sessionID)
+}
+
+func GetSongIDFromTinysongBase62(base string) (interface{}, error) {
+	args := map[string]interface{}{
+		"base62": base,
+	}
+
+	matched, err := regexp.MatchString("/^[A-Za-z0-9]+$/", base)
+	if err != nil {
+		return nil, err
+	}
+	if !matched {
+		return nil, errors.New("Base don't match regexp")
+	}
+
+	return makeCall("getSongIDFromTinysongBase62", args, "songID", false, sessionID)
+}
+
+func GetSongURLFromTinysongBase62(base string) (interface{}, error) {
+	args := map[string]interface{}{
+		"base62": base,
+	}
+
+	matched, err := regexp.MatchString("/^[A-Za-z0-9]+$/", base)
+	if err != nil {
+		return nil, err
+	}
+	if !matched {
+		return nil, errors.New("Base don't match regexp")
+	}
+
+	return makeCall("getSongURLFromTinysongBase62", args, "songID", false, sessionID)
+}
+
+func GetSongURLFromSongID(songId int) (interface{}, error) {
+	args := map[string]interface{} {
+		"songID": songId,
+	}
+
+	return makeCall("getSongURLFromSongID", args, "url", false, sessionID)
+}
+
+func GetSongsInfo(songIds []int) (interface{}, error) {
+	args := map[string]interface{} {
+		"songdIDs":songIds,
+	}
+	return makeCall("getSongsInfo",args, "songs", false, sessionID)
+}
+
+func GetAlbumsInfo(albumIds []int) (interface{}, error) {
+	args := map[string]interface{} {
+		"albumIDs":albumIds,
+	}
+	return makeCall("getAlbumsInfo",args, "albums", false, sessionID)
+}
+
+func GetAlbumSongs(albumId int, limit int) (interface{}, error){
+	args := map[string]interface{}{
+		"albumID": albumId,
+		"limit": limit,
+	}
+
+	return makeCall("getAlbumSongs",args, "songs", false, sessionID)
+
+}
+
+func GetPlaylistSongs(playlistId int, limit int) ([]int, error) {
 	args := map[string]interface{}{
 		"playlistID": playlistId,
 		"limit": limit,
@@ -190,14 +278,102 @@ func GetPlaylistSongs(playlistId int, limit int) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	var SongIds []float64
+	var SongIds []int
 	for _,v := range songs.(map[string]interface{})["songs"].([]interface{}) {
 		songId := v.(map[string]interface{})["SongID"].(float64)
-		SongIds = append(SongIds,songId)
+		SongIds = append(SongIds,int(songId))
 	}
 	return SongIds ,nil
 }
 
+func GetDoesExist(id int, Type string) (interface{}, error) {
+	args := map[string]interface{}{}
+	var call string
+	switch Type {
+	case "song" :
+		args["songID"] = id
+		call = "getDoesSongExist"
+	case "artist" :
+		args["artistID"] = id
+		call = "getDoesArtistExist"
+	case "Album" :
+		args["albumID"] = id
+		call = "getDoesAlbumExist"
+	}
+	return makeCall(call, args, "", false, sessionID)
+}
+
+func GetArtistAlbums(artistId int, verified bool) (interface{}, error) {
+	args := map[string]interface{}{
+		"artistID": artistId,
+	}
+	if verified {
+		return makeCall("getArtistVerifiedAlbums", args, "albums", false, sessionID)
+	}
+	return makeCall("getArtistAlbums", args, "albums", false, sessionID)
+}
+
+func GetArtistPopularSongs(artistId int) (interface{}, error) {
+	args := map[string]interface{}{
+		"artistID": artistId,
+	}
+	return makeCall("getArtistPopularSongs", args, "songs", false, sessionID)
+
+}
+
+func GetPopularSongsToday(limit int) (interface{}, error) {
+	args := map[string]interface{}{
+		"limit":limit,
+	}
+	return makeCall("getPopularSongsToday", args, "songs", false, sessionID)
+}
+
+func GetPopularSongsMonth(limit int) (interface{}, error) {
+	args := map[string]interface{}{
+		"limit":limit,
+	}
+	return makeCall("getPopularSongsMonth", args, "songs", false, sessionID)
+}
+
+// TODO getSongSearchResults
+// TODO getCountry
+// TODO SetCountry
+
+func GetArtistSearchResults(query string, limit int) (interface{}, error) {
+	args := map[string]interface{}{
+		"query": query,
+		"limit":limit,
+	}
+	return makeCall("getArtistSearchResults", args, "artists", false, sessionID)
+}
+
+func GetAlbumSearchResults(query string, limit int) (interface{}, error) {
+	args := map[string]interface{}{
+		"query": query,
+		"limit":limit,
+	}
+	return makeCall("getAlbumSearchResults", args, "albums", false, sessionID)
+}
+
+// TODO getStreamKeyStreamServer
+// TODO getSubscriberStreamKey
+
+func MarkStreamKeyOver30Secs(streamKey string, streamServerId int) (interface{}, error) {
+	args := map[string]interface{}{
+		"streamKey":streamKey,
+		"streamServerID": streamServerId,
+	}
+	return makeCall("markStreamKeyOver30Secs", args, "", false, sessionID)
+}
+
+func MarkSongComplete (songId int, streamKey string, streamServerId int) (interface{}, error) {
+	args := map[string]interface{}{
+		"songID": songId,
+		"streamKey":streamKey,
+		"streamServerID": streamServerId,
+	}
+	return makeCall("markSongComplete", args, "", false, sessionID)
+}
 
 func createMessageSig(params string, secret string) string {
 	return computeHmacMD5(params, secret)
@@ -222,6 +398,9 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	if e !=nil {
 		log.Fatal(e.Error())
 	}
+	if Logs {
+		log.Print(string(d))
+	}
 	content := bytes.NewBuffer([]byte(d))
 
 	sig := createMessageSig(string(d), WsSecret)
@@ -234,10 +413,15 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	if readerr != nil {
 		log.Fatal("Err READALL: "+ err.Error())
 	}
-	//log.Print(string(body))
+	if Logs {
+		log.Print(string(body))
+	}
 	var jsonresponse map[string]interface{}
 	err = json.Unmarshal(body,&jsonresponse)
-	log.Print(jsonresponse)
+	if Logs {
+		log.Print(jsonresponse)
+	}
+
 	if err != nil {
 		log.Fatal("Err : "+ err.Error())
 	}
@@ -251,4 +435,3 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 
 	return jsonresponse["result"], nil
 }
-
