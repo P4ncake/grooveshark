@@ -1,6 +1,5 @@
 package gsAPI
 
-
 import (
 	"bytes"
 	"crypto/hmac"
@@ -11,27 +10,26 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strconv"
 	"regexp"
+	"strconv"
 )
 
 type Headers struct {
-	WsKey string `json:"wsKey"`
+	WsKey     string `json:"wsKey"`
 	SessionID string `json:"sessionID"`
 }
 
 type Payload struct {
-	Method string `json:"method"`
+	Method     string      `json:"method"`
 	Parameters interface{} `json:"parameters"`
-	Header Headers `json:"header"`
+	Header     Headers     `json:"header"`
 }
 
 var apiScheme = "http://"
 var apiHost = "api.grooveshark.com"
 var apiEndpoint = "/ws3.php"
 
-
-var WsKey ,WsSecret string
+var WsKey, WsSecret string
 var sessionID string
 
 var Logs = false
@@ -43,9 +41,9 @@ func New(key string, secret string) {
 	WsSecret = secret
 }
 
-func PingService() (string, error){
+func PingService() (string, error) {
 	args := map[string]interface{}{}
-	result, err := makeCall("pingService",args,"",true,"")
+	result, err := makeCall("pingService", args, "", true, "")
 	if err != nil {
 		return "", err
 	}
@@ -54,9 +52,8 @@ func PingService() (string, error){
 
 func StartSession() (string, error) {
 
-
 	args := map[string]interface{}{}
-	result, err := makeCall("startSession",args, "sessionID", true, "")
+	result, err := makeCall("startSession", args, "sessionID", true, "")
 	if err != nil {
 		return "", err
 	}
@@ -67,7 +64,7 @@ func StartSession() (string, error) {
 
 func LogOut(SessionID string) error {
 	args := map[string]interface{}{}
-	result, err := makeCall("logout",args,"success",false,SessionID)
+	result, err := makeCall("logout", args, "success", false, SessionID)
 
 	if err != nil {
 		return err
@@ -79,7 +76,7 @@ func LogOut(SessionID string) error {
 }
 
 func GetUserInfo() (interface{}, error) {
-	return makeCall("getuserinfo", map[string]interface{}{},"",false,sessionID)
+	return makeCall("getuserinfo", map[string]interface{}{}, "", false, sessionID)
 }
 
 func Authenticate(username string, password string) (interface{}, error) {
@@ -92,11 +89,11 @@ func Authenticate(username string, password string) (interface{}, error) {
 	hpass := hex.EncodeToString(h.Sum(nil))
 	log.Print(hpass)
 	args := map[string]interface{}{
-		"login":username,
-		"password" : hpass,
+		"login":    username,
+		"password": hpass,
 	}
 
-	result, err := makeCall("authenticate",args,"",true,sessionID)
+	result, err := makeCall("authenticate", args, "", true, sessionID)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +111,7 @@ func Authenticate(username string, password string) (interface{}, error) {
  *	Set limit to 0 for no limit
  *	Set UserId to 0 to get the logged-in user's playlists
  */
-func GetUserPlaylists(limit int,UserId int) (interface{}, error) {
+func GetUserPlaylists(limit int, UserId int) (interface{}, error) {
 	var method string
 	args := map[string]interface{}{
 		"limit": limit,
@@ -128,7 +125,7 @@ func GetUserPlaylists(limit int,UserId int) (interface{}, error) {
 
 	}
 
-	return makeCall(method,args,"playlists",false,sessionID)
+	return makeCall(method, args, "playlists", false, sessionID)
 }
 
 func GetUserLibrary(limit int) (interface{}, error) {
@@ -137,7 +134,7 @@ func GetUserLibrary(limit int) (interface{}, error) {
 		"limit": limit,
 	}
 
-	return makeCall("getUserLibrarySongs",args,"songs",false,sessionID)
+	return makeCall("getUserLibrarySongs", args, "songs", false, sessionID)
 
 }
 
@@ -147,7 +144,7 @@ func GetUserFavorites(limit int) (interface{}, error) {
 		"limit": limit,
 	}
 
-	return makeCall("getUserFavoriteSongs",args,"songs",false,sessionID)
+	return makeCall("getUserFavoriteSongs", args, "songs", false, sessionID)
 
 }
 
@@ -155,42 +152,41 @@ func AddUserFavoriteSong(songId int) (interface{}, error) {
 	args := map[string]interface{}{
 		"songID": songId,
 	}
-	return makeCall("addUserFavoriteSong",args,"success",false,sessionID)
+	return makeCall("addUserFavoriteSong", args, "success", false, sessionID)
 }
 
 func AddUserLibrarySongs(songId int) (interface{}, error) {
 	args := map[string]interface{}{
 		"songID": songId,
 	}
-	return makeCall("addUserLibrarySongsEx",args,"success",false,sessionID)
+	return makeCall("addUserLibrarySongsEx", args, "success", false, sessionID)
 }
 
-func CreatePlaylist(name string,songIds []int) (interface{}, error) {
+func CreatePlaylist(name string, songIds []int) (interface{}, error) {
 	if name == "" {
 		return nil, errors.New("Playlist's Name empty")
 	}
 	args := map[string]interface{}{
-		"name": name,
-		"songIDs":songIds,
+		"name":    name,
+		"songIDs": songIds,
 	}
 
-	return makeCall("createPlaylist",args,"",false,sessionID)
+	return makeCall("createPlaylist", args, "", false, sessionID)
 }
 
-
 func AddSongToPlaylist(playlistId int, songId int) (interface{}, error) {
-	songs, err := GetPlaylistSongs(playlistId,0)
+	songs, err := GetPlaylistSongs(playlistId, 0)
 	if err != nil {
 		return nil, err
 	}
 	songs = append(songs, songId)
-	return SetPlaylistSongs(playlistId,songs)
+	return SetPlaylistSongs(playlistId, songs)
 }
 
 func SetPlaylistSongs(playlistId int, songIds []int) (interface{}, error) {
 	args := map[string]interface{}{
 		"playlistID": playlistId,
-		"songIDs": songIds,
+		"songIDs":    songIds,
 	}
 
 	return makeCall("setPlaylistSongs", args, "", false, sessionID)
@@ -240,7 +236,7 @@ func GetSongURLFromTinysongBase62(base string) (interface{}, error) {
 }
 
 func GetSongURLFromSongID(songId int) (interface{}, error) {
-	args := map[string]interface{} {
+	args := map[string]interface{}{
 		"songID": songId,
 	}
 
@@ -248,57 +244,57 @@ func GetSongURLFromSongID(songId int) (interface{}, error) {
 }
 
 func GetSongsInfo(songIds []int) (interface{}, error) {
-	args := map[string]interface{} {
-		"songdIDs":songIds,
+	args := map[string]interface{}{
+		"songdIDs": songIds,
 	}
-	return makeCall("getSongsInfo",args, "songs", false, sessionID)
+	return makeCall("getSongsInfo", args, "songs", false, sessionID)
 }
 
 func GetAlbumsInfo(albumIds []int) (interface{}, error) {
-	args := map[string]interface{} {
-		"albumIDs":albumIds,
+	args := map[string]interface{}{
+		"albumIDs": albumIds,
 	}
-	return makeCall("getAlbumsInfo",args, "albums", false, sessionID)
+	return makeCall("getAlbumsInfo", args, "albums", false, sessionID)
 }
 
-func GetAlbumSongs(albumId int, limit int) (interface{}, error){
+func GetAlbumSongs(albumId int, limit int) (interface{}, error) {
 	args := map[string]interface{}{
 		"albumID": albumId,
-		"limit": limit,
+		"limit":   limit,
 	}
 
-	return makeCall("getAlbumSongs",args, "songs", false, sessionID)
+	return makeCall("getAlbumSongs", args, "songs", false, sessionID)
 
 }
 
 func GetPlaylistSongs(playlistId int, limit int) ([]int, error) {
 	args := map[string]interface{}{
 		"playlistID": playlistId,
-		"limit": limit,
+		"limit":      limit,
 	}
-	songs, err :=  makeCall("getPlaylistSongs",args,"songs",false,sessionID)
+	songs, err := makeCall("getPlaylistSongs", args, "songs", false, sessionID)
 	if err != nil {
 		return nil, err
 	}
 	var SongIds []int
-	for _,v := range songs.(map[string]interface{})["songs"].([]interface{}) {
+	for _, v := range songs.(map[string]interface{})["songs"].([]interface{}) {
 		songId := v.(map[string]interface{})["SongID"].(float64)
-		SongIds = append(SongIds,int(songId))
+		SongIds = append(SongIds, int(songId))
 	}
-	return SongIds ,nil
+	return SongIds, nil
 }
 
 func GetDoesExist(id int, Type string) (interface{}, error) {
 	args := map[string]interface{}{}
 	var call string
 	switch Type {
-	case "song" :
+	case "song":
 		args["songID"] = id
 		call = "getDoesSongExist"
-	case "artist" :
+	case "artist":
 		args["artistID"] = id
 		call = "getDoesArtistExist"
-	case "Album" :
+	case "Album":
 		args["albumID"] = id
 		call = "getDoesAlbumExist"
 	}
@@ -325,14 +321,14 @@ func GetArtistPopularSongs(artistId int) (interface{}, error) {
 
 func GetPopularSongsToday(limit int) (interface{}, error) {
 	args := map[string]interface{}{
-		"limit":limit,
+		"limit": limit,
 	}
 	return makeCall("getPopularSongsToday", args, "songs", false, sessionID)
 }
 
 func GetPopularSongsMonth(limit int) (interface{}, error) {
 	args := map[string]interface{}{
-		"limit":limit,
+		"limit": limit,
 	}
 	return makeCall("getPopularSongsMonth", args, "songs", false, sessionID)
 }
@@ -344,7 +340,7 @@ func GetPopularSongsMonth(limit int) (interface{}, error) {
 func GetArtistSearchResults(query string, limit int) (interface{}, error) {
 	args := map[string]interface{}{
 		"query": query,
-		"limit":limit,
+		"limit": limit,
 	}
 	return makeCall("getArtistSearchResults", args, "artists", false, sessionID)
 }
@@ -352,7 +348,7 @@ func GetArtistSearchResults(query string, limit int) (interface{}, error) {
 func GetAlbumSearchResults(query string, limit int) (interface{}, error) {
 	args := map[string]interface{}{
 		"query": query,
-		"limit":limit,
+		"limit": limit,
 	}
 	return makeCall("getAlbumSearchResults", args, "albums", false, sessionID)
 }
@@ -362,16 +358,16 @@ func GetAlbumSearchResults(query string, limit int) (interface{}, error) {
 
 func MarkStreamKeyOver30Secs(streamKey string, streamServerId int) (interface{}, error) {
 	args := map[string]interface{}{
-		"streamKey":streamKey,
+		"streamKey":      streamKey,
 		"streamServerID": streamServerId,
 	}
 	return makeCall("markStreamKeyOver30Secs", args, "", false, sessionID)
 }
 
-func MarkSongComplete (songId int, streamKey string, streamServerId int) (interface{}, error) {
+func MarkSongComplete(songId int, streamKey string, streamServerId int) (interface{}, error) {
 	args := map[string]interface{}{
-		"songID": songId,
-		"streamKey":streamKey,
+		"songID":         songId,
+		"streamKey":      streamKey,
 		"streamServerID": streamServerId,
 	}
 	return makeCall("markSongComplete", args, "", false, sessionID)
@@ -396,9 +392,9 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	}
 
 	headers := Headers{WsKey: WsKey, SessionID: sessionID}
-	post := Payload{Method: method,Parameters: args,Header: headers }
-	d,e := json.Marshal(post)
-	if e !=nil {
+	post := Payload{Method: method, Parameters: args, Header: headers}
+	d, e := json.Marshal(post)
+	if e != nil {
 		log.Fatal(e.Error())
 	}
 	if Logs {
@@ -406,10 +402,9 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 	}
 	content := bytes.NewBuffer([]byte(d))
 
-
 	sig := createMessageSig(string(d), WsSecret)
-	requestUrl := apiScheme+apiHost+apiEndpoint+"?sig="+sig
-	resp, err := http.Post(requestUrl,"text/json charset=UTF-8",content)
+	requestUrl := apiScheme + apiHost + apiEndpoint + "?sig=" + sig
+	resp, err := http.Post(requestUrl, "text/json charset=UTF-8", content)
 	if err != nil {
 		log.Fatal("Err POST: " + err.Error())
 	}
@@ -422,7 +417,7 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 		log.Print(string(body))
 	}
 	var jsonresponse map[string]interface{}
-	err = json.Unmarshal(body,&jsonresponse)
+	err = json.Unmarshal(body, &jsonresponse)
 	if Logs {
 		log.Print(jsonresponse)
 	}
@@ -431,12 +426,11 @@ func makeCall(method string, args interface{}, resultkey string, https bool, ses
 		log.Fatal("Err : " + err.Error())
 	}
 
-
 	jsonErr := jsonresponse["errors"]
 	if jsonErr != nil {
 		Err := jsonresponse["errors"].([]interface{})[0].(map[string]interface{})
-		return nil, errors.New(strconv.FormatFloat(Err["code"].(float64),'g',3,64)+" - " + Err["message"].(string))
-		return nil,errors.New("TODO")
+		return nil, errors.New(strconv.FormatFloat(Err["code"].(float64), 'g', 3, 64) + " - " + Err["message"].(string))
+		return nil, errors.New("TODO")
 	}
 
 	return jsonresponse["result"], nil
