@@ -34,3 +34,9 @@ func main() {
 }
 
 ~~~
+
+Set gsAPI.Logs at true to print out Json calls and responses
+
+~~~ go
+gsAPI.Logs = true
+~~~
