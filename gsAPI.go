@@ -80,7 +80,6 @@ func GetUserInfo() (interface{}, error) {
 }
 
 func GetCountry(ip string) (interface{}, error) {
-	log.Print(ip)
 	matched, err := regexp.MatchString(`([0-9]{1,3}\.){3}[0-9]{1,3}`, ip)
 	if err != nil {
 		return nil, err
@@ -103,7 +102,6 @@ func Authenticate(username string, password string) (interface{}, error) {
 	h := md5.New()
 	h.Write([]byte(password))
 	hpass := hex.EncodeToString(h.Sum(nil))
-	log.Print(hpass)
 	args := map[string]interface{}{
 		"login":    username,
 		"password": hpass,
