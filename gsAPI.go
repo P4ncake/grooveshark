@@ -81,7 +81,7 @@ func GetUserInfo() (interface{}, error) {
 
 func GetCountry(ip string) (interface{}, error) {
 	log.Print(ip)
-	matched, err := regexp.MatchString(`([0-9]{1,3}\.){3}[0-9]{1,3}`,ip)
+	matched, err := regexp.MatchString(`([0-9]{1,3}\.){3}[0-9]{1,3}`, ip)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +92,7 @@ func GetCountry(ip string) (interface{}, error) {
 		"ip": ip,
 	}
 
-	return makeCall("getCountry",args,"",false,"")
+	return makeCall("getCountry", args, "", false, "")
 }
 
 func Authenticate(username string, password string) (interface{}, error) {
@@ -349,7 +349,7 @@ func GetPopularSongsMonth(limit int) (interface{}, error) {
 	return makeCall("getPopularSongsMonth", args, "songs", false, sessionID)
 }
 
-func GetSongSearchResults(query string, country interface{},limit int, page int) (interface{}, error) {
+func GetSongSearchResults(query string, country interface{}, limit int, page int) (interface{}, error) {
 	var offset int
 	if limit != 0 {
 		offset = (page - 1) * limit
@@ -358,10 +358,10 @@ func GetSongSearchResults(query string, country interface{},limit int, page int)
 	}
 
 	args := map[string]interface{}{
-		"query": query,
+		"query":   query,
 		"country": country,
-		"limit": limit,
-		"offset": offset,
+		"limit":   limit,
+		"offset":  offset,
 	}
 
 	return makeCall("getSongSearchResults", args, "songs", false, sessionID)
@@ -385,7 +385,7 @@ func GetAlbumSearchResults(query string, limit int) (interface{}, error) {
 
 func GetStreamKeyStreamServer(songId int, country interface{}, lowBitrate bool) (interface{}, error) {
 	args := map[string]interface{}{
-		"songID": songId,
+		"songID":  songId,
 		"country": country,
 	}
 	if lowBitrate {
@@ -396,7 +396,7 @@ func GetStreamKeyStreamServer(songId int, country interface{}, lowBitrate bool) 
 }
 func GetSubscriberStreamKey(songId int, country interface{}, lowBitrate bool, trialUniqueID int) (interface{}, error) {
 	args := map[string]interface{}{
-		"songID": songId,
+		"songID":  songId,
 		"country": country,
 	}
 	if lowBitrate {
