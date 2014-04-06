@@ -4,7 +4,11 @@ GsAPI offers Groovesharks Public API support in GO
 
 ## Getting Started
 
+Install gsAPI package
+
+~~~
 go get github.com/P4ncake/gsAPI
+~~~ 
 
 ~~~ go
 package main 
