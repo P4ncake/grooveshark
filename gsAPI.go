@@ -79,6 +79,22 @@ func GetUserInfo() (interface{}, error) {
 	return makeCall("getuserinfo", map[string]interface{}{}, "", false, sessionID)
 }
 
+func GetCountry(ip string) (interface{}, error) {
+	log.Print(ip)
+	matched, err := regexp.MatchString(`([0-9]{1,3}\.){3}[0-9]{1,3}`,ip)
+	if err != nil {
+		return nil, err
+	}
+	if !matched {
+		return nil, errors.New("Invalid IP Address")
+	}
+	args := map[string]interface{}{
+		"ip": ip,
+	}
+
+	return makeCall("getCountry",args,"",false,"")
+}
+
 func Authenticate(username string, password string) (interface{}, error) {
 	if username == "" || password == "" {
 		return nil, errors.New("Empty username or password")
@@ -333,9 +349,23 @@ func GetPopularSongsMonth(limit int) (interface{}, error) {
 	return makeCall("getPopularSongsMonth", args, "songs", false, sessionID)
 }
 
-// TODO getSongSearchResults
-// TODO getCountry
-// TODO SetCountry
+func GetSongSearchResults(query string, country interface{},limit int, page int) (interface{}, error) {
+	var offset int
+	if limit != 0 {
+		offset = (page - 1) * limit
+	} else {
+		offset = (page - 1) * 100
+	}
+
+	args := map[string]interface{}{
+		"query": query,
+		"country": country,
+		"limit": limit,
+		"offset": offset,
+	}
+
+	return makeCall("getSongSearchResults", args, "songs", false, sessionID)
+}
 
 func GetArtistSearchResults(query string, limit int) (interface{}, error) {
 	args := map[string]interface{}{
@@ -353,8 +383,32 @@ func GetAlbumSearchResults(query string, limit int) (interface{}, error) {
 	return makeCall("getAlbumSearchResults", args, "albums", false, sessionID)
 }
 
-// TODO getStreamKeyStreamServer
-// TODO getSubscriberStreamKey
+func GetStreamKeyStreamServer(songId int, country interface{}, lowBitrate bool) (interface{}, error) {
+	args := map[string]interface{}{
+		"songID": songId,
+		"country": country,
+	}
+	if lowBitrate {
+		args["lowBitrate"] = true
+	}
+
+	return makeCall("getStreamKeyStreamServer", args, "", false, sessionID)
+}
+func GetSubscriberStreamKey(songId int, country interface{}, lowBitrate bool, trialUniqueID int) (interface{}, error) {
+	args := map[string]interface{}{
+		"songID": songId,
+		"country": country,
+	}
+	if lowBitrate {
+		args["lowBitrate"] = true
+	}
+	if trialUniqueID != 0 {
+		args["uniqueID"] = trialUniqueID
+	}
+
+	return makeCall("getSubscriberStreamKey", args, "", false, sessionID)
+
+}
 
 func MarkStreamKeyOver30Secs(streamKey string, streamServerId int) (interface{}, error) {
 	args := map[string]interface{}{
