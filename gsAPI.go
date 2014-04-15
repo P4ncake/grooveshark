@@ -94,14 +94,19 @@ func GetCountry(ip string) (interface{}, error) {
 	return makeCall("getCountry", args, "", false, "")
 }
 
-func Authenticate(username string, password string) (interface{}, error) {
+func Authenticate(username string, password string, hash bool) (interface{}, error) {
 	if username == "" || password == "" {
 		return nil, errors.New("Empty username or password")
 	}
 
-	h := md5.New()
-	h.Write([]byte(password))
-	hpass := hex.EncodeToString(h.Sum(nil))
+	var hpass string
+	if !hash {
+		h := md5.New()
+		h.Write([]byte(password))
+		hpass = hex.EncodeToString(h.Sum(nil))
+	} else {
+		hpass = password
+	}
 	args := map[string]interface{}{
 		"login":    username,
 		"password": hpass,
